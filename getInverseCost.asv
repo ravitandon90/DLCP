@@ -1,0 +1,13 @@
+% Calculate the inverse cost 
+function Inverse_Cost = getInverseCost (Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, i, j, Sensor_Nodes)
+Distance_BS = 
+if (getDistance(Sensor_Nodes(j, 1), Sensor_Nodes (j, 2), BS(1), BS(2)) > Threshold_Distance)
+    Energy_Spent_CH = Packet_Size * (Packet_Transmission_Cost + Energy_Data_Aggregation) + Packet_Size *  Amplification_Energy_Multi_Path * ;
+else
+    
+end    
+    Residual_Energy_CH = ;
+    Energy_Spent_SN = ;
+    Residual_Energy_SN = ;
+    Inverse_Cost = 1/ ((Residual_Energy_CH) * (Residual_Energy_SN));
+end

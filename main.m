@@ -1,0 +1,163 @@
+% Main file - for LCP Heterogeneous - define parameters here
+clc
+Packet_Size = 4000; % packet size 500 Bytes => 4000 bits.
+Packet_Transmission_Cost = 50 * (10 ^ -9); % Packet Transmission Cost = 50 nano Joule per Bit per Packet
+Amplification_Energy_Multi_Path = 13 * (10 ^ -16);   % Packet Amplification Cost = 0.0013 pico Joule per Bit per metre squared
+Amplification_Energy_Free_Space = 10  * (10 ^ (-12)); % 
+Energy_Data_Aggregation = 5 * (10 ^ -9);
+Num_Sensors = 100;
+p = 0.05*Num_Sensors;
+%Area_Net = 100 * 100;
+%Radius_Net = sqrt(Area_Net/pi);
+BS = [1200, 1200];
+Threshold_Distance = 75;
+Cluster_Radius = 25;
+Distance = zeros(Num_Sensors, Num_Sensors);
+%We get the position of the sensor nodes
+Sensor_Nodes = readFromFile('..\Sensor_Network\Sensor_Network.txt');
+collectedDataPerRound = fopen ('C:/Users/RaviHome/Desktop/Results_H/dataPerRound_ALCP_fraction_energy.txt', 'w');
+Percent_High_Energy_Nodes = 20;
+Number_High_Energy_Nodes = Num_Sensors * Percent_High_Energy_Nodes/100;
+Number_Low_Energy_Nodes = Num_Sensors * (1-(Percent_High_Energy_Nodes/100));
+numFrames = 15;
+
+Neighbor_Count = zeros (Num_Sensors, 1);
+Neighbors = zeros (Num_Sensors, Num_Sensors);
+
+
+%Calculating distance between the sensor nodes
+for i=1 : Num_Sensors        
+   for j=1 : Num_Sensors            
+       Distance(i,j) = getDistance(Sensor_Nodes(i,1), Sensor_Nodes(i,2), Sensor_Nodes(j,1), Sensor_Nodes(j,2));
+       if (Distance (i, j) <= Cluster_Radius)
+           Neighbor_Count (i) = Neighbor_Count (i) + 1;
+           Neighbors (i, Neighbor_Count (i)) = j;
+       end
+   end
+end
+
+%analyseDistance (Distance, Num_Sensors);
+Initial_Energy = 0.5;
+Min_Energy = 0.01;
+Ratio_High_Low_Energy = 5;
+Sensor_Node_Energy = ones (Num_Sensors, 1) * Initial_Energy;
+
+for j = 1 : Number_High_Energy_Nodes
+    Sensor_Node_Energy (Number_Low_Energy_Nodes+j) = Initial_Energy * Ratio_High_Low_Energy;
+end
+
+Inverse_Cost = zeros (Num_Sensors, Num_Sensors);
+Min_Cost = inf;
+
+for i=1 : Num_Sensors        
+    for j=1 : Num_Sensors  
+        if (i == j)
+            continue;
+        else
+            if (Distance (i, j) > Cluster_Radius)
+                continue;
+            else
+                Inverse_Cost (i, j) = getInverseCost (Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, i, j, Sensor_Nodes, Threshold_Distance, Distance);
+            end
+            if (Inverse_Cost (i, j) < Min_Cost)
+                Min_Cost = Inverse_Cost (i, j);
+            end            
+        end
+    end
+end
+
+LM_Init = Min_Cost;
+Lm = ones (Num_Sensors, 1) * LM_Init;
+
+
+eff_num_it = 0;
+total_Energy_Used = 0;
+total_Messages_Transmitted = 0;
+
+T = searchHeuristic (Num_Sensors, Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, Sensor_Nodes, Min_Energy, Lm, p, Inverse_Cost, Cluster_Radius, Distance);
+Inverse_Cost = getInverseCostMatrix (Num_Sensors, Distance, Cluster_Radius, Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, Sensor_Nodes, Threshold_Distance);
+
+sum_frac=0;
+aveClusterHeadEnergySum=0;
+while (1)
+[Neighbors, Neighbor_Count] = getNeighbors (Num_Sensors, Sensor_Nodes, Distance, Sensor_Node_Energy, Min_Energy,  Cluster_Radius);
+if (eff_num_it == 0)
+    % The Centralized Phase
+    Y = solve_P_Median_SubG (Num_Sensors, Sensor_Node_Energy, Min_Energy, Lm, p, T, Cluster_Radius, Distance, Inverse_Cost, Neighbors, Neighbor_Count, Packet_Transmission_Cost, Energy_Data_Aggregation, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Packet_Size, BS, Sensor_Nodes, Threshold_Distance);
+else
+    % The Distributed Phase
+    Y = solve_P_Median_Homogeneous (Num_Sensors, Y, Min_Energy, Sensor_Node_Energy, Distance, Cluster_Radius, Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, Sensor_Nodes, Threshold_Distance, Inverse_Cost, Neighbors, Neighbor_Count);
+end
+[stdDev, maxClusterSize, aveClusterHeadEnergy] = clusterEval (Y, Sensor_Node_Energy, Min_Energy, Num_Sensors);
+
+% Updating the energy within the sensor nodes 
+[Sensor_Node_Energy, EnergyUsedThisRound, numMessagesTransmittedThisRound] = updateEnergies (Num_Sensors, Y, Sensor_Nodes, BS, Threshold_Distance, Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Free_Space, Amplification_Energy_Multi_Path, Energy_Data_Aggregation, Sensor_Node_Energy, Distance, Cluster_Radius, numFrames, Min_Energy);
+
+if (numMessagesTransmittedThisRound == 0)
+    z=1;
+end
+total_Messages_Transmitted = total_Messages_Transmitted + numMessagesTransmittedThisRound;
+Inverse_Cost = getInverseCostMatrix (Num_Sensors, Distance, Cluster_Radius, Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, Sensor_Nodes, Threshold_Distance);
+NumberDead = getNumberOfNodesDead (Sensor_Node_Energy, Min_Energy, Num_Sensors);
+
+% Calculating Rounds
+eff_num_it = eff_num_it + 1;
+
+% Calculating Nodes Alive
+nodesAlive = Num_Sensors - NumberDead; 
+% Calculating NumberOfMessages Transmitted
+
+% Calculating Number of cluster heads
+[numClusterHead, frac] = calculateNumberOfClusterHeads (Num_Sensors, Sensor_Node_Energy, Min_Energy, Y, Number_Low_Energy_Nodes);
+sum_frac = sum_frac + frac;
+% Calculating Average Energy 
+averageEnergy = mean (Sensor_Node_Energy);
+
+% Calculating Std Dev Energy 
+stdDevEnergy = std (Sensor_Node_Energy);
+
+% Calculating Total Energy Used
+total_Energy_Used = total_Energy_Used + EnergyUsedThisRound;
+
+% Calculating Energy Remaining of Nodes Alive
+Energy_Nodes_Alive = getEnergyNodesAliveMatrix (nodesAlive, Sensor_Node_Energy, Num_Sensors, Min_Energy);
+stdDevEnergy_alive = std (Energy_Nodes_Alive);
+averageEnergy_alive = mean (Energy_Nodes_Alive);
+aveClusterHeadEnergySum = aveClusterHeadEnergySum + aveClusterHeadEnergy/averageEnergy_alive;
+
+
+fprintf(collectedDataPerRound, '%d\t%d\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\t%f\r\n',  eff_num_it, nodesAlive, NumberDead/Num_Sensors, total_Messages_Transmitted/10000, numClusterHead, averageEnergy, stdDevEnergy, total_Energy_Used, EnergyUsedThisRound, stdDev, maxClusterSize, aveClusterHeadEnergy, averageEnergy_alive, numMessagesTransmittedThisRound/10000, stdDevEnergy_alive, frac, aveClusterHeadEnergy/averageEnergy_alive);
+
+if (NumberDead >= 0.95*(Num_Sensors))
+    aveClusterHeadEnergySum/eff_num_it
+    break;
+end
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

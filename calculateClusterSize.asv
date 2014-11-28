@@ -1,0 +1,9 @@
+function clusterSize = calculateClusterSize (Number_Sensor_Nodes, Y)
+clusterSize = zeros ();
+for i = 1 : Number_Sensor_Nodes
+    if (Y(i, i) == 1)
+        for j = 1 : Number_Sensor_Nodes
+        end
+    end
+end
+end

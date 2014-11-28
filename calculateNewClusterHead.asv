@@ -1,0 +1,14 @@
+function indexOfClusterHead = calculateNewClusterHead (Y_Old, oldCH, Energy_Sensor_Node, Min_Energy)
+Cost = zeros (Number_Sensor_Nodes, 1);
+for  i = 1 : Number_Sensor_Nodes
+    if (Y_Old (i, oldCH) == 1)
+        if (Energy_Sensor_Node (i) > Min_Energy)
+            for j = 1 : Number_Sensor_Nodes
+                if ((i ~= j) && (Energy_Sensor_Node () > Min_Energy))
+                Cost (i) = Cost (i) + 
+                
+            end
+        end
+    end
+end
+end

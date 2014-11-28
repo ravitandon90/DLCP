@@ -1,0 +1,64 @@
+function T = searchHeuristic (Sn_Energy, Sn, Lm, p, D, Packet_Size,Packet_Transmission_Cost,Amplification_Energy, Min_Energy, t_init, BS)
+S = 0.5;     % Initial Step Size
+s = S ;      % Current step size %
+%k = 0 ;     % Current number of iterations %
+kmax = 5 ;   % Maximum number of iterations %
+to = 0 ;     % Initial value of the lagrangian surrogate multiplier %
+t = to ;     % Current value of the Lagrangian Surrogate Multiplier%
+T = t ;      % Final Value of the Lagrangian Surrogate Multiplier %
+z = 0 ;      % Maximum value of the Relaxed Objective Function %
+tplus =-1 ;  % Undefined 
+tminus = -1; % Undefined 
+
+%min_Lm
+for k = 1 : kmax
+    %(Number_Sensor_Nodes, Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, Sensor_Nodes, Min_Energy, Lm, p)
+    [Y,value] =  solve_P_Median (Number_Sensor_Nodes, Packet_Size, Packet_Transmission_Cost,   Sn_Energy,Sn,Lm,p,D,Packet_Transmission_Cost, Packet_Size, Amplification_Energy, Min_Energy, t, BS);
+    if(value > z)
+        T = t;
+        z = value;    
+        mu_lambda = 0;
+        for i  = 1 : length (Sn)
+              s1 = sum(Y(i,:));
+              s2 = 1 - s1;
+              mu_lambda = mu_lambda + Lm(i) * s2;    %mu_lambda is the slope of lagrange surrogate 
+        end  
+         if(mu_lambda < 0)
+             tminus = t; %if slope is decreasing the current t,z = start range%
+             zminus = z;
+             if((tplus == -1))
+                 t = t + s;             
+             else
+                 t = (zplus * tplus + zminus * tminus )/(zplus + zminus);
+                  [Y,value]  =  solve_p_median_searchHeuristic(Sn_Energy,Sn,Lm,p,D,Packet_Transmission_Cost, Packet_Size, Amplification_Energy, Min_Energy, t, BS);                  
+                 if(value > z)
+                     T = t;
+                 end
+                     break;
+             end
+         else
+             tplus = t;
+             zplus = z;
+             if((tminus == -1))
+                 t = t - s;
+             else
+                   t = (zplus * tplus + zminus * tminus )/(zplus + zminus);
+                    [Y,value] =  solve_p_median_searchHeuristic(Sn_Energy,Sn,Lm,p,D,Packet_Transmission_Cost, Packet_Size, Amplification_Energy, Min_Energy, t, BS);   
+                     if(value > z)
+                         T = t;
+                     end
+                     break;
+             end
+         
+         end
+    else
+         t = t - s/2;
+           [Y,value]  =  solve_p_median_searchHeuristic(Sn_Energy,Sn,Lm,p,D,Packet_Transmission_Cost, Packet_Size, Amplification_Energy, Min_Energy, t, BS);         
+           if(value > z)
+                         T = t;
+           end
+           break;
+    end 
+  
+end
+%here tplus and tminus gives us the range of Lagrange Surrogate Multiplier%

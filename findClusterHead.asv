@@ -1,0 +1,7 @@
+function clusterHead = findClusterHead (Number_Sensor_Nodes, Y)
+clusterH
+for i = 1 : Number_Sensor_Nodes
+    for j = 1 : Number_Sensor_Nodes
+    end
+end
+end

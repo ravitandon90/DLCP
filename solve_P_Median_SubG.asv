@@ -1,0 +1,61 @@
+function Y = solve_P_Median_SubG (Number_Sensor_Nodes, Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, Sensor_Nodes, Min_Energy, Lm, p, t, Cluster_Radius, Distance)
+
+lb = -inf;
+ub = +inf;
+C = zeros (Number_Sensor_Nodes, 1);
+Pi = 2;
+while (1)
+    
+    [Y, value] = solve_P_Median_Relaxed (Number_Sensor_Nodes, Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, Sensor_Nodes, Min_Energy, Lm, p, t);
+
+Y_Feasible = zeros (Number_Sensor_Nodes, Number_Sensor_Nodes);
+% Get a feasible solution 
+    for i = 1 : Number_Sensor_Nodes
+        if (Y (i, i) == 1)
+            Y_Feasible (i, i) = 1;
+        end
+    end
+    
+value_Feasible = 0;
+    for i = 1 : Number_Sensor_Nodes
+        Min_Cost = inf;
+        Min_Cost_Index = i;
+        if (Sensor_Node_Energy (i) > Min_Energy)
+            for j = 1 : Number_Sensor_Nodes                
+                if ((Sensor_Node_Energy (j) > Min_Energy) && (Y(j, j) == 1) && (Dis(i, j) > Cluster_Radius))
+                    invCost = getInverseCost (Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, i, j, Sensor_Nodes);
+                    if (invCost < Min_Cost)
+                        Min_Cost_Index = j;
+                        Min_Cost = invCost;
+                    end
+                end
+            end
+        end
+        Y_Feasible (i, Min_Cost_Index) = 1;
+        if (i ~= Min_Cost_Index)
+            value_Feasible = value_Feasible + getInverseCost (i, Min_Cost_Index);
+        end       
+    end
+    
+% Updating the value of lb
+lb = max (lb, value);
+
+% Updating the value of ub
+ub = min (ub, value_Feasible);
+
+g = zeros (Number_Sensor_Nodes, 1);
+for i = 1 : Number_Sensor_Nodes 
+    v = 0;
+    for j = 1 : Number_Sensor_Nodes
+        v = v + Y(i, j); 
+    end
+    g (i) = 1 - v;
+end
+
+%Update the step size
+Step_Size = (Pi * (ub - lb)) / (norm (g) ^ 2);
+
+%Updating the Lagrange Multiplier
+for i = 1 : 
+
+end

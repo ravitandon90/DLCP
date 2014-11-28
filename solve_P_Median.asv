@@ -1,0 +1,58 @@
+% We get the value of v(LtSPlambda) here, subject to constraints (2, 3, 4)
+function [Y, value] = solve_P_Median (Number_Sensor_Nodes, Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, Sensor_Nodes, Min_Energy, Lm, p)
+B = zeros (Number_Sensor_Nodes, 2);
+Y = zeros (Number_Sensor_Nodes, Number_Sensor_Nodes);
+value=0;
+Inverse_Cost = zeros (Number_Sensor_Nodes, Number_Sensor_Nodes);
+for i = 1 : Number_Sensor_Nodes
+    for j = 1 : Number_Sensor_Nodes        
+        Inverse_Cost (i, j) = getInverseCost (Packet_Size, Packet_Transmission_Cost, Amplification_Energy_Multi_Path, Amplification_Energy_Free_Space, Energy_Data_Aggregation, BS, Sensor_Node_Energy, i, j, Sensor_Nodes);
+    end
+end
+% Solving Equation 6 - Calculation of B
+for j = 1: Number_Sensor_Nodes
+    if(Sensor_Node_Energy(j) < Min_Energy) % If a sensor node is dead, it cannot become a cluster head
+        B(j, 1) = j;
+        B(j, 2) = inf;
+        continue;
+    end
+      for i = 1 : Number_Sensor_Nodes
+        if(Sensor_Node_Energy(i)> Min_Energy)
+          x1 = InverseCost(i,j) - (t*Lm(i));       % Costij  – t* lambdai  %
+          B(j,2) = B(j,2) +  min([0,x1]); % B stores (index, value), Summation(Bi) being done %           
+        end
+       end
+      B(j,1) = j;
+end
+
+B = sortrows (B, 2);
+% Satisfying Constraint 2
+for i = 1 : p
+    index = B (i, 1);
+    Y (index, index) = 1;
+end
+
+% Assigning Cluster Heads To Sensor Nodes
+for j = 1: Number_Sensor_Nodes
+    if ((Sensor_Node_Energy(j)> Min_Energy) && (Y(j, j ) == 1))
+        for i = 1 : Number_Sensor_Nodes      
+            if(Sensor_Node_Energy(i)> Min_Energy)                
+                x1 = InverseCost(i,j) - (t*Lm(i));       % Costij  – t* lambdai  %
+                if (x1 < 0)
+                    Y (i, j) = 1;
+                    
+                else
+                    
+                end
+            end
+        end
+    end
+end
+
+for i = 1 : p 
+    value = value + B (i, 2);
+end
+
+value =
+
+end

@@ -1,0 +1,22 @@
+function Y_New = solve_P_Median_Homogeneous ()
+Y_New = zeros (Number_Sensor_Nodes, Number_Sensor_Nodes);
+CH_Elected = zeros (Number_Sensor_Nodes, 1);
+clusterhead_Count = 0;
+for i = 1 : Number_Sensor_Nodes 
+if (Y_Old(i, i) == 1)
+    if (Energy_Sensor_Node (i) < Min_Energy)
+        continue;
+    else
+        if (checkIfAllDead (Y_Old, i, Energy_Sensor_Node, Min_Energy) ==  1)
+            clusterhead_Count =  clusterhead_Count + 1;
+            CH_Elected (clusterhead_Count) = i;            
+        else
+        indexOfClusterHead = calculateNewClusterHead (Y_Old, i, Energy_Sensor_);
+            clusterhead_Count =  clusterhead_Count + 1;
+            CH_Elected (clusterhead_Count) = indexOfClusterHead;            
+        end    
+    end
+    
+end
+end
+end
